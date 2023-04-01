@@ -14,7 +14,7 @@ public class PlayerMovement : MonoBehaviour
     public float gravityScale = 1.5f;
     public Camera mainCamera;
 
-    bool facingRight = true;
+    public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
     bool isGrounded = false;
     Vector3 cameraPos;

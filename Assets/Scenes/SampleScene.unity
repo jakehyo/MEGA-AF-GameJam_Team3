@@ -220,9 +220,10 @@ GameObject:
   - component: {fileID: 638505498}
   - component: {fileID: 638505496}
   - component: {fileID: 638505495}
+  - component: {fileID: 638505499}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -357,6 +358,22 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
+--- !u!114 &638505499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 638505493}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2d89aeeb13a8004ba2181b79594098f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseThrowSpeed: 1
+  chargeThrowMultiplier: 5
+  maxChargeTime: 2
+  projectilePrefab: {fileID: 2458804066598157607, guid: c6aec99e9a1f1134e95819eb03efe338, type: 3}
 --- !u!1 &824808535
 GameObject:
   m_ObjectHideFlags: 0

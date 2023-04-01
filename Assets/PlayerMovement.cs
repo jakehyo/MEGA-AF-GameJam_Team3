@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(CapsuleCollider2D))]
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -12,6 +12,9 @@ public class PlayerMovement : MonoBehaviour
     public float maxSpeed = 3.4f;
     public float jumpHeight = 6.5f;
     public float gravityScale = 1.5f;
+    public float jumpCharge = 0.0f;
+    public float jumpChargeRate = 2.0f;
+    public bool isCrouching = false;
     public Camera mainCamera;
 
     public bool facingRight { get; private set; } = true;
@@ -19,7 +22,8 @@ public class PlayerMovement : MonoBehaviour
     bool isGrounded = false;
     Vector3 cameraPos;
     Rigidbody2D r2d;
-    BoxCollider2D mainCollider;
+    CapsuleCollider2D mainCollider;
+    SpriteRenderer spriteRenderer;
     Transform t;
 
     // Use this for initialization
@@ -27,7 +31,8 @@ public class PlayerMovement : MonoBehaviour
     {
         t = transform;
         r2d = GetComponent<Rigidbody2D>();
-        mainCollider = GetComponent<BoxCollider2D>();
+        mainCollider = GetComponent<CapsuleCollider2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
         r2d.freezeRotation = true;
         r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         r2d.gravityScale = gravityScale;
@@ -42,45 +47,77 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Movement controls
-        if ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D)) && (isGrounded || Mathf.Abs(r2d.velocity.x) > 0.01f))
-        {
-            moveDirection = Input.GetKey(KeyCode.A) ? -1 : 1;
+        if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W)) {
+            // Charge Jump
+            
+            if (isGrounded)
+            {
+                if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))
+                {
+                    isCrouching = true;
+                }
+                moveDirection = 0;
+                jumpCharge += Time.deltaTime * jumpChargeRate;
+                if (jumpCharge > jumpHeight)
+                {
+                    jumpCharge = jumpHeight;
+                }
+            }
         }
         else
         {
-            if (isGrounded || r2d.velocity.magnitude < 0.01f)
+            
+            // Movement controls
+            if (isGrounded)
             {
                 moveDirection = 0;
+                if (Input.GetKey(KeyCode.A)){
+                    moveDirection -= 1;
+                }
+                else if (Input.GetKey(KeyCode.D))
+                {
+                    moveDirection += 1;
+                }
+
+            }
+
+            if (jumpCharge > 0.0f && isGrounded)
+            {
+                r2d.velocity = (new Vector2((moveDirection) * maxSpeed, jumpCharge).normalized) * jumpCharge;
+                jumpCharge = 0.0f;
+                isCrouching = false;
+            }
+
+            // Change facing direction
+            if (moveDirection != 0)
+            {
+                if (moveDirection > 0 && !facingRight)
+                {
+                    facingRight = true;
+                    spriteRenderer.flipX = false;
+                }
+                if (moveDirection < 0 && facingRight)
+                {
+                    facingRight = false;
+                    spriteRenderer.flipX = true;
+                }
             }
         }
 
-        // Change facing direction
-        if (moveDirection != 0)
+        if (isCrouching)
         {
-            if (moveDirection > 0 && !facingRight)
-            {
-                facingRight = true;
-                t.localScale = new Vector3(Mathf.Abs(t.localScale.x), t.localScale.y, transform.localScale.z);
-            }
-            if (moveDirection < 0 && facingRight)
-            {
-                facingRight = false;
-                t.localScale = new Vector3(-Mathf.Abs(t.localScale.x), t.localScale.y, t.localScale.z);
-            }
+            spriteRenderer.color = Color.red;
         }
-
-        // Jumping
-        if (Input.GetKeyDown(KeyCode.W) && isGrounded)
+        else
         {
-            r2d.velocity = new Vector2(r2d.velocity.x, jumpHeight);
+            spriteRenderer.color = Color.green;
         }
 
         // Camera follow
-        if (mainCamera)
+/*        if (mainCamera)
         {
             mainCamera.transform.position = new Vector3(t.position.x, cameraPos.y, cameraPos.z);
-        }
+        }*/
     }
 
     void FixedUpdate()

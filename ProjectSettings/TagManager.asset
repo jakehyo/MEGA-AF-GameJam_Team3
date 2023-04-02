@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Rope
   - PlayerProjectile
+  - Terrain
   layers:
   - Default
   - TransparentFX

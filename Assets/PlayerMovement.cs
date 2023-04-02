@@ -32,8 +32,8 @@ public class PlayerMovement : MonoBehaviour
     float climbingXPos;
     bool moveEnabled = true;
     bool prevGrounded = false;
-    int prevDir;
-    float prevPos;
+    bool isAirborne = false;
+
     public Vector2 velocity;
     Vector3 cameraPos;
     Rigidbody2D r2d;
@@ -50,8 +50,6 @@ public class PlayerMovement : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         audioSource = GetComponent<AudioSource>();
-        prevPos = transform.position.x;
-        prevDir = 0;
         r2d.freezeRotation = true;
         r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         r2d.gravityScale = gravityScale;
@@ -69,7 +67,8 @@ public class PlayerMovement : MonoBehaviour
     {
         velocity = r2d.velocity;
         moveDirection = 0;
-        
+
+
         //check for preventing wall climbing
         if (isClimbing && Mathf.Abs(transform.position.x - climbingXPos) > 0.01)
         {
@@ -133,15 +132,13 @@ public class PlayerMovement : MonoBehaviour
                     velocity.y = jumpCharge;
                     jumpCharge = 0.0f;
                     isCrouching = false;
+                    isAirborne = true;
                     //isGrounded = false;
                     audioSource.clip = jumpClip;
                     audioSource.Play();
                 }
-                else if(r2d.velocity.y < 1.0f )
-                {
-                    velocity.y = 0;
-                }
-                if (moveEnabled)
+
+                if (Input.GetKey(KeyCode.A))
                 {
                     if (Input.GetKey(KeyCode.A))
                     {
@@ -163,6 +160,8 @@ public class PlayerMovement : MonoBehaviour
             }
 
 
+
+
             // Change facing direction
             if (moveDirection != 0)
             {
@@ -178,6 +177,15 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
         }
+
+/*        if (isAirborne && isGrounded && !Mathf.Approximately(r2d.velocity.y, 0.0f))
+        {
+            audioSource.clip = landClip;
+            audioSource.Play();
+        }*/
+
+
+
 
         /*velocity.x = moveDirection * maxSpeed;
         velocity.y += Physics2D.gravity.y * Time.deltaTime;
@@ -222,12 +230,6 @@ public class PlayerMovement : MonoBehaviour
                     break;
                 }
             }
-        }
-
-        if (!prevGrounded && isGrounded)
-        {
-            audioSource.clip = landClip;
-            audioSource.Play();
         }
 
     }

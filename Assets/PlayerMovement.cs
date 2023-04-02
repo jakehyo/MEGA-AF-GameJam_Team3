@@ -11,12 +11,15 @@ public class PlayerMovement : MonoBehaviour
     // Move player in 2D space
     public float maxSpeed = 3.4f;
     public float jumpHeight = 6.5f;
+    public float climbStrength = 10.0f;
+    public float ropeJump = 15.0f;
     public float gravityScale = 1.5f;
     public Camera mainCamera;
 
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
     bool isGrounded = false;
+    bool isClimbing = false;
     Vector3 cameraPos;
     Rigidbody2D r2d;
     BoxCollider2D mainCollider;
@@ -43,13 +46,13 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         // Movement controls
-        if ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D)) && (isGrounded || Mathf.Abs(r2d.velocity.x) > 0.01f))
+        if ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D)) && (isGrounded || isClimbing || Mathf.Abs(r2d.velocity.x) > 0.01f))
         {
             moveDirection = Input.GetKey(KeyCode.A) ? -1 : 1;
         }
         else
         {
-            if (isGrounded || r2d.velocity.magnitude < 0.01f)
+            if (isGrounded || isClimbing || r2d.velocity.magnitude < 0.01f)
             {
                 moveDirection = 0;
             }
@@ -70,10 +73,14 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // Jumping
+        // Jumping and climbing
         if (Input.GetKeyDown(KeyCode.W) && isGrounded)
         {
             r2d.velocity = new Vector2(r2d.velocity.x, jumpHeight);
+        }
+        else if (Input.GetKeyDown(KeyCode.W) && isClimbing)
+        {
+            r2d.velocity = new Vector2(r2d.velocity.x, climbStrength);
         }
 
         // Camera follow
@@ -96,9 +103,10 @@ public class PlayerMovement : MonoBehaviour
         {
             for (int i = 0; i < colliders.Length; i++)
             {
-                if (colliders[i] != mainCollider)
+                if (colliders[i] != mainCollider && !colliders[i].CompareTag("Rope"))
                 {
                     isGrounded = true;
+                    isClimbing = false;
                     break;
                 }
             }
@@ -110,5 +118,24 @@ public class PlayerMovement : MonoBehaviour
         // Simple debug
         Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(0, colliderRadius, 0), isGrounded ? Color.green : Color.red);
         Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(colliderRadius, 0, 0), isGrounded ? Color.green : Color.red);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Rope") && !isGrounded)
+        {
+            isClimbing = true;
+        }
+    }
+
+    //apply some extra velocity when leaving rope climbing
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Rope") && !isGrounded)
+        {
+            r2d.AddForce(Vector2.up * ropeJump, ForceMode2D.Impulse);
+            isClimbing = false;
+            isGrounded = false;
+        }
     }
 }

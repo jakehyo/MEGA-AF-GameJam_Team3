@@ -4,6 +4,8 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(CapsuleCollider2D))]
+[RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(AudioSource))]
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -12,31 +14,37 @@ public class PlayerMovement : MonoBehaviour
     public float maxSpeed = 3.4f;
     public float jumpHeight = 6.5f;
     public float gravityScale = 1.5f;
-    public float jumpCharge = 0.0f;
+    float jumpCharge = 0.0f;
     public float jumpChargeRate = 2.0f;
-    public bool isCrouching = false;
+    public AudioClip landClip;
+    public AudioClip jumpClip;
+    bool isCrouching = false;
     public Camera mainCamera;
 
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
-    bool isGrounded = false;
+    public bool isGrounded = false;
+    bool prevGrounded = false;
+    public Vector2 velocity;
     Vector3 cameraPos;
     Rigidbody2D r2d;
     CapsuleCollider2D mainCollider;
     SpriteRenderer spriteRenderer;
-    Transform t;
+    Animator animator;
+    AudioSource audioSource;
 
     // Use this for initialization
     void Start()
     {
-        t = transform;
         r2d = GetComponent<Rigidbody2D>();
         mainCollider = GetComponent<CapsuleCollider2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>();
+        audioSource = GetComponent<AudioSource>();
         r2d.freezeRotation = true;
         r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         r2d.gravityScale = gravityScale;
-        facingRight = t.localScale.x > 0;
+        facingRight = transform.localScale.x > 0;
 
         if (mainCamera)
         {
@@ -47,15 +55,30 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W)) {
-            // Charge Jump
-            
+        moveDirection = 0;
+        // Movement controls
+        if (Input.GetKey(KeyCode.A)){
+            moveDirection -= 1;
+        }
+        else if (Input.GetKey(KeyCode.D)){
+            moveDirection += 1;
+        }
+        else
+        {
             if (isGrounded)
             {
-                if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))
-                {
-                    isCrouching = true;
-                }
+                moveDirection = 0;
+            }
+        }
+
+        if (isGrounded)
+        {
+            velocity.y = 0;
+
+            if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W))
+            {
+                // Charge Jump
+                isCrouching = true;
                 moveDirection = 0;
                 jumpCharge += Time.deltaTime * jumpChargeRate;
                 if (jumpCharge > jumpHeight)
@@ -63,29 +86,17 @@ public class PlayerMovement : MonoBehaviour
                     jumpCharge = jumpHeight;
                 }
             }
-        }
-        else
-        {
-            
-            // Movement controls
-            if (isGrounded)
+            else
             {
-                moveDirection = 0;
-                if (Input.GetKey(KeyCode.A)){
-                    moveDirection -= 1;
-                }
-                else if (Input.GetKey(KeyCode.D))
+                //Jump on Release
+                if (jumpCharge > 0.0f)
                 {
-                    moveDirection += 1;
+                    r2d.velocity = new Vector2(r2d.velocity.x, jumpCharge);
+                    jumpCharge = 0.0f;
+                    isCrouching = false;
+                    audioSource.clip = jumpClip;
+                    audioSource.Play();
                 }
-
-            }
-
-            if (jumpCharge > 0.0f && isGrounded)
-            {
-                r2d.velocity = (new Vector2((moveDirection) * maxSpeed, jumpCharge).normalized) * jumpCharge;
-                jumpCharge = 0.0f;
-                isCrouching = false;
             }
 
             // Change facing direction
@@ -104,20 +115,24 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        if (isCrouching)
-        {
-            spriteRenderer.color = Color.red;
-        }
-        else
-        {
-            spriteRenderer.color = Color.green;
-        }
+        
+
+        /*velocity.x = moveDirection * maxSpeed;
+        velocity.y += Physics2D.gravity.y * Time.deltaTime;
+        transform.Translate(velocity * Time.deltaTime);*/
+
+        animator.SetFloat("speed", Mathf.Abs(r2d.velocity.x));
+        animator.SetBool("isCrouched", isCrouching);
+        animator.SetBool("isGrounded", isGrounded);
+
+        // Apply movement velocity
+        r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
 
         // Camera follow
-/*        if (mainCamera)
-        {
-            mainCamera.transform.position = new Vector3(t.position.x, cameraPos.y, cameraPos.z);
-        }*/
+        /*        if (mainCamera)
+                {
+                    mainCamera.transform.position = new Vector3(t.position.x, cameraPos.y, cameraPos.z);
+                }*/
     }
 
     void FixedUpdate()
@@ -126,14 +141,15 @@ public class PlayerMovement : MonoBehaviour
         float colliderRadius = mainCollider.size.x * 0.4f * Mathf.Abs(transform.localScale.x);
         Vector3 groundCheckPos = colliderBounds.min + new Vector3(colliderBounds.size.x * 0.5f, colliderRadius * 0.9f, 0);
         // Check if player is grounded
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(groundCheckPos, colliderRadius);
+        Collider2D[] hits = Physics2D.OverlapCircleAll(groundCheckPos, colliderRadius);
         //Check if any of the overlapping colliders are not player collider, if so, set isGrounded to true
+        prevGrounded = isGrounded;
         isGrounded = false;
-        if (colliders.Length > 0)
+        if(hits.Length > 0)
         {
-            for (int i = 0; i < colliders.Length; i++)
+            foreach (Collider2D hit in hits)
             {
-                if (colliders[i] != mainCollider)
+                if (hit != mainCollider)
                 {
                     isGrounded = true;
                     break;
@@ -141,11 +157,12 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // Apply movement velocity
-        r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
+        if (!prevGrounded && isGrounded)
+        {
+            audioSource.clip = landClip;
+            audioSource.Play();
+        }
 
-        // Simple debug
-        Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(0, colliderRadius, 0), isGrounded ? Color.green : Color.red);
-        Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(colliderRadius, 0, 0), isGrounded ? Color.green : Color.red);
+
     }
 }

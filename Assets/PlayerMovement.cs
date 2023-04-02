@@ -97,13 +97,14 @@ public class PlayerMovement : MonoBehaviour
             //jumping away from ropes
             if (moveDirection != 0)
             {
-                r2d.velocity = Vector2.zero;
-                r2d.AddForce(((Vector2.right * moveDirection) + Vector2.up) * ropeJump, ForceMode2D.Impulse);
+                //r2d.velocity = Vector2.zero;
+                velocity = new Vector2(maxSpeed * moveDirection, ropeJump);
+                //r2d.AddForce(((Vector2.right * moveDirection) + Vector2.up) * ropeJump, ForceMode2D.Impulse);
                 animator.SetBool("isClimbing", false);
             }
             else if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))    //climbing up ropes
             {
-                r2d.velocity = new Vector2(r2d.velocity.x, ropeJump);
+                velocity = new Vector2(r2d.velocity.x, ropeJump);
             }
         }
         else if (isGrounded)
@@ -176,7 +177,6 @@ public class PlayerMovement : MonoBehaviour
         animator.SetBool("isCrouched", isCrouching);
         animator.SetBool("isGrounded", isGrounded);
         animator.SetBool("isClimbing", isClimbing);
-        animator.SetFloat("climbSpeed", velocity.y);
         // Apply movement velocity
         r2d.velocity = velocity;
 

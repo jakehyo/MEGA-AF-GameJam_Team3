@@ -26,8 +26,10 @@ public class PlayerMovement : MonoBehaviour
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
     public bool isGrounded = false;
-    bool isClimbing = false;
+    public bool isClimbing = false;
     bool prevGrounded = false;
+    int prevDir;
+    float prevPos;
     public Vector2 velocity;
     Vector3 cameraPos;
     Rigidbody2D r2d;
@@ -44,10 +46,13 @@ public class PlayerMovement : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         audioSource = GetComponent<AudioSource>();
+        prevPos = transform.position.x;
+        prevDir = 0;
         r2d.freezeRotation = true;
         r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         r2d.gravityScale = gravityScale;
         facingRight = transform.localScale.x > 0;
+        velocity = r2d.velocity;
 
         if (mainCamera)
         {
@@ -58,29 +63,23 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        velocity = r2d.velocity;
         moveDirection = 0;
-        // Movement controls
-        if (Input.GetKey(KeyCode.A)){
-            moveDirection -= 1;
-        }
-        else if (Input.GetKey(KeyCode.D)){
-            moveDirection += 1;
-        }
-        else
+        
+        if (isClimbing)
         {
-            if (isGrounded || isClimbing || r2d.velocity.magnitude < 0.01f)
+            if (Input.GetKeyDown(KeyCode.W))
             {
-                moveDirection = 0;
+                velocity = new Vector2(r2d.velocity.x, climbStrength);
             }
         }
-
-        if (isGrounded)
+        else if (isGrounded)
         {
-            velocity.y = 0;
 
-            if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W))
+            if (Input.GetKey(KeyCode.Space))
             {
                 // Charge Jump
+                velocity.x = 0;
                 isCrouching = true;
                 moveDirection = 0;
                 jumpCharge += Time.deltaTime * jumpChargeRate;
@@ -91,16 +90,28 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                //Jump on Release
                 if (jumpCharge > 0.0f)
                 {
-                    r2d.velocity = new Vector2(r2d.velocity.x, jumpCharge);
+                    //Jump on Release
+                    velocity.y = jumpCharge;
                     jumpCharge = 0.0f;
                     isCrouching = false;
                     audioSource.clip = jumpClip;
                     audioSource.Play();
                 }
+
+                if (Input.GetKey(KeyCode.A))
+                {
+                    moveDirection -= 1;
+                }
+                if (Input.GetKey(KeyCode.D))
+                {
+                    moveDirection += 1;
+                }
+
+                velocity.x = moveDirection * maxSpeed;
             }
+
 
             // Change facing direction
             if (moveDirection != 0)
@@ -118,23 +129,19 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.W) && isClimbing)
-        {
-            r2d.velocity = new Vector2(r2d.velocity.x, climbStrength);
-        }
 
-        
 
         /*velocity.x = moveDirection * maxSpeed;
         velocity.y += Physics2D.gravity.y * Time.deltaTime;
         transform.Translate(velocity * Time.deltaTime);*/
 
-        animator.SetFloat("speed", Mathf.Abs(r2d.velocity.x));
+        animator.SetFloat("speed", Mathf.Abs(moveDirection));
         animator.SetBool("isCrouched", isCrouching);
         animator.SetBool("isGrounded", isGrounded);
-
+        animator.SetBool("isClimbing", isClimbing);
+        animator.SetFloat("climbSpeed", velocity.y);
         // Apply movement velocity
-        r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
+        r2d.velocity = velocity;
 
         // Camera follow
         /*        if (mainCamera)

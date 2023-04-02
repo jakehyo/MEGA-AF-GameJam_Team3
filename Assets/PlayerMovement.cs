@@ -75,11 +75,11 @@ public class PlayerMovement : MonoBehaviour
         }
         else if (isGrounded)
         {
-
             if (Input.GetKey(KeyCode.Space))
             {
                 // Charge Jump
                 velocity.x = 0;
+                velocity.y = 0;
                 isCrouching = true;
                 moveDirection = 0;
                 jumpCharge += Time.deltaTime * jumpChargeRate;
@@ -96,8 +96,13 @@ public class PlayerMovement : MonoBehaviour
                     velocity.y = jumpCharge;
                     jumpCharge = 0.0f;
                     isCrouching = false;
+                    //isGrounded = false;
                     audioSource.clip = jumpClip;
                     audioSource.Play();
+                }
+                else if(r2d.velocity.y < 1.0f )
+                {
+                    velocity.y = 0;
                 }
 
                 if (Input.GetKey(KeyCode.A))
@@ -110,6 +115,7 @@ public class PlayerMovement : MonoBehaviour
                 }
 
                 velocity.x = moveDirection * maxSpeed;
+
             }
 
 
@@ -126,10 +132,8 @@ public class PlayerMovement : MonoBehaviour
                     facingRight = false;
                     spriteRenderer.flipX = true;
                 }
-            }
+            }   
         }
-
-
 
         /*velocity.x = moveDirection * maxSpeed;
         velocity.y += Physics2D.gravity.y * Time.deltaTime;
@@ -144,10 +148,10 @@ public class PlayerMovement : MonoBehaviour
         r2d.velocity = velocity;
 
         // Camera follow
-        /*        if (mainCamera)
-                {
-                    mainCamera.transform.position = new Vector3(t.position.x, cameraPos.y, cameraPos.z);
-                }*/
+        if (mainCamera)
+        {
+            mainCamera.transform.position = new Vector3(cameraPos.x, transform.position.y, cameraPos.z);
+        }
     }
 
     void FixedUpdate()
@@ -166,7 +170,16 @@ public class PlayerMovement : MonoBehaviour
             {
                 if (hit != mainCollider && !hit.CompareTag("Rope"))
                 {
-                    isGrounded = true;
+                    ColliderDistance2D colliderDistance = hit.Distance(mainCollider);
+                    if (colliderDistance.isOverlapped)
+                    {
+                        transform.Translate(colliderDistance.pointA - colliderDistance.pointB);
+                    }
+                    if (Mathf.Approximately(Vector2.Angle(colliderDistance.normal, Vector2.up), 0.0f))
+                    {
+                        isGrounded = true;
+                    }
+
                     isClimbing = false;
                     break;
                 }
@@ -178,7 +191,6 @@ public class PlayerMovement : MonoBehaviour
             audioSource.clip = landClip;
             audioSource.Play();
         }
-
 
     }
 

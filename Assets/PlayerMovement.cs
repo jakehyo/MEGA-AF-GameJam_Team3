@@ -30,6 +30,7 @@ public class PlayerMovement : MonoBehaviour
     float climbingColliderWidth = 0.05f;
     public bool isClimbing = false;
     float climbingXPos;
+    bool moveEnabled = true;
     bool prevGrounded = false;
     int prevDir;
     float prevPos;
@@ -79,13 +80,14 @@ public class PlayerMovement : MonoBehaviour
         if (isClimbing)
         {
             animator.SetBool("isClimbing", true);
+            velocity = new Vector2(0, velocity.y);
             moveDirection = 0;
             // Movement controls for climbing
-            if (Input.GetKeyDown(KeyCode.A) && !Input.GetKeyDown(KeyCode.D))
+            if (Input.GetKeyDown(KeyCode.A) && !Input.GetKeyDown(KeyCode.D) && moveEnabled)
             {
                 moveDirection = -1;
             }
-            else if (Input.GetKeyDown(KeyCode.D) && !Input.GetKeyDown(KeyCode.A))
+            else if (Input.GetKeyDown(KeyCode.D) && !Input.GetKeyDown(KeyCode.A) && moveEnabled)
             {
                 moveDirection = 1;
             }
@@ -97,19 +99,20 @@ public class PlayerMovement : MonoBehaviour
             //jumping away from ropes
             if (moveDirection != 0)
             {
-                //r2d.velocity = Vector2.zero;
-                velocity = new Vector2(maxSpeed * moveDirection, ropeJump);
-                //r2d.AddForce(((Vector2.right * moveDirection) + Vector2.up) * ropeJump, ForceMode2D.Impulse);
+                isClimbing = false;
                 animator.SetBool("isClimbing", false);
+                //r2d.velocity = velocity;
+                //r2d.AddForce(((Vector2.right * moveDirection) + Vector2.up) * ropeJump, ForceMode2D.Impulse);
+                velocity = new Vector2(ropeJump * moveDirection, ropeJump);
             }
-            else if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))    //climbing up ropes
+            else if ((Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W)) && moveEnabled)    //climbing up ropes
             {
-                velocity = new Vector2(r2d.velocity.x, ropeJump);
+                velocity = new Vector2(velocity.x, ropeJump);
             }
         }
         else if (isGrounded)
         {
-            if (Input.GetKey(KeyCode.Space))
+            if (Input.GetKey(KeyCode.Space) && moveEnabled)
             {
                 // Charge Jump
                 velocity.x = 0;
@@ -138,15 +141,22 @@ public class PlayerMovement : MonoBehaviour
                 {
                     velocity.y = 0;
                 }
-
-                if (Input.GetKey(KeyCode.A))
+                if (moveEnabled)
                 {
-                    moveDirection -= 1;
+                    if (Input.GetKey(KeyCode.A))
+                    {
+                        moveDirection -= 1;
+                    }
+                    if (Input.GetKey(KeyCode.D))
+                    {
+                        moveDirection += 1;
+                    }
                 }
-                if (Input.GetKey(KeyCode.D))
+                else
                 {
-                    moveDirection += 1;
+                    moveDirection = 0;
                 }
+                
 
                 velocity.x = moveDirection * maxSpeed;
 
@@ -166,7 +176,7 @@ public class PlayerMovement : MonoBehaviour
                     facingRight = false;
                     spriteRenderer.flipX = true;
                 }
-            }   
+            }
         }
 
         /*velocity.x = moveDirection * maxSpeed;
@@ -177,7 +187,8 @@ public class PlayerMovement : MonoBehaviour
         animator.SetBool("isCrouched", isCrouching);
         animator.SetBool("isGrounded", isGrounded);
         animator.SetBool("isClimbing", isClimbing);
-        // Apply movement velocity
+
+        //apply velocity
         r2d.velocity = velocity;
 
         // Camera follow
@@ -204,16 +215,10 @@ public class PlayerMovement : MonoBehaviour
                 if (hit != mainCollider && !hit.CompareTag("Rope"))
                 {
                     ColliderDistance2D colliderDistance = hit.Distance(mainCollider);
-                    if (colliderDistance.isOverlapped)
-                    {
-                        transform.Translate(colliderDistance.pointA - colliderDistance.pointB);
-                    }
                     if (Mathf.Approximately(Vector2.Angle(colliderDistance.normal, Vector2.up), 0.0f))
                     {
                         isGrounded = true;
                     }
-
-                    isClimbing = false;
                     break;
                 }
             }
@@ -235,6 +240,10 @@ public class PlayerMovement : MonoBehaviour
             transform.position = new Vector2(collision.transform.position.x, transform.position.y);
             climbingXPos = collision.transform.position.x;
             r2d.velocity = Vector2.zero;
+        }
+        else if (collision.CompareTag("Cake"))
+        {
+            moveEnabled = false;
         }
     }
 

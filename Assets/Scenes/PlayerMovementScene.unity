@@ -466,8 +466,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxSpeed: 6
   jumpHeight: 25
-  climbStrength: 10
-  ropeJump: 15
+  climbStrength: 7
+  ropeJump: 10
   gravityScale: 4
   jumpChargeRate: 12
   landClip: {fileID: 8300000, guid: 296128b4621609b4cb0dd274ed31ad3a, type: 3}

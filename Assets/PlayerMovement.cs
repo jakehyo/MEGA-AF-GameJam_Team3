@@ -22,6 +22,7 @@ public class PlayerMovement : MonoBehaviour
     public AudioClip jumpClip;
     bool isCrouching = false;
     public Camera mainCamera;
+    public GameObject musicScript;
 
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
@@ -138,7 +139,7 @@ public class PlayerMovement : MonoBehaviour
                     audioSource.Play();
                 }
 
-                if (Input.GetKey(KeyCode.A))
+                if (moveEnabled)
                 {
                     if (Input.GetKey(KeyCode.A))
                     {
@@ -246,6 +247,7 @@ public class PlayerMovement : MonoBehaviour
         else if (collision.CompareTag("Cake"))
         {
             moveEnabled = false;
+            musicScript.GetComponent<Music>().switchMusic();
         }
     }
 

@@ -26,7 +26,10 @@ public class PlayerMovement : MonoBehaviour
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
     public bool isGrounded = false;
-    bool isClimbing = false;
+    float defaultColliderWidth;
+    float climbingColliderWidth = 0.05f;
+    public bool isClimbing = false;
+    float climbingXPos;
     bool prevGrounded = false;
     public Vector2 velocity;
     Vector3 cameraPos;
@@ -48,6 +51,7 @@ public class PlayerMovement : MonoBehaviour
         r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         r2d.gravityScale = gravityScale;
         facingRight = transform.localScale.x > 0;
+        defaultColliderWidth = mainCollider.size.x;
 
         if (mainCamera)
         {
@@ -58,72 +62,109 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        moveDirection = 0;
-        // Movement controls
-        if (Input.GetKey(KeyCode.A)){
-            moveDirection -= 1;
-        }
-        else if (Input.GetKey(KeyCode.D)){
-            moveDirection += 1;
-        }
-        else
+        //check for preventing wall climbing
+        if (isClimbing && Mathf.Abs(transform.position.x - climbingXPos) > 0.01)
         {
-            if (isGrounded || isClimbing || r2d.velocity.magnitude < 0.01f)
+            isClimbing = false;
+            animator.SetBool("isClimbing", false);
+        }
+
+        if (isClimbing)
+        {
+            animator.SetBool("isClimbing", true);
+            moveDirection = 0;
+            // Movement controls for climbing
+            if (Input.GetKeyDown(KeyCode.A) && !Input.GetKeyDown(KeyCode.D))
             {
-                moveDirection = 0;
+                moveDirection = -1;
             }
-        }
-
-        if (isGrounded)
-        {
-            velocity.y = 0;
-
-            if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W))
+            else if (Input.GetKeyDown(KeyCode.D) && !Input.GetKeyDown(KeyCode.A))
             {
-                // Charge Jump
-                isCrouching = true;
-                moveDirection = 0;
-                jumpCharge += Time.deltaTime * jumpChargeRate;
-                if (jumpCharge > jumpHeight)
-                {
-                    jumpCharge = jumpHeight;
-                }
+                moveDirection = 1;
             }
             else
             {
-                //Jump on Release
-                if (jumpCharge > 0.0f)
-                {
-                    r2d.velocity = new Vector2(r2d.velocity.x, jumpCharge);
-                    jumpCharge = 0.0f;
-                    isCrouching = false;
-                    audioSource.clip = jumpClip;
-                    audioSource.Play();
-                }
+                moveDirection = 0;
             }
 
-            // Change facing direction
+            //jumping away from ropes
             if (moveDirection != 0)
             {
-                if (moveDirection > 0 && !facingRight)
-                {
-                    facingRight = true;
-                    spriteRenderer.flipX = false;
-                }
-                if (moveDirection < 0 && facingRight)
-                {
-                    facingRight = false;
-                    spriteRenderer.flipX = true;
-                }
+                r2d.velocity = Vector2.zero;
+                r2d.AddForce(((Vector2.right * moveDirection) + Vector2.up) * ropeJump, ForceMode2D.Impulse);
+                animator.SetBool("isClimbing", false);
+            }
+            else if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))    //climbing up ropes
+            {
+                r2d.velocity = new Vector2(r2d.velocity.x, ropeJump);
             }
         }
-
-        if (Input.GetKeyDown(KeyCode.W) && isClimbing)
+        else
         {
-            r2d.velocity = new Vector2(r2d.velocity.x, climbStrength);
-        }
+            moveDirection = 0;
+            // Movement controls
+            if (Input.GetKey(KeyCode.A))
+            {
+                moveDirection -= 1;
+            }
+            else if (Input.GetKey(KeyCode.D))
+            {
+                moveDirection += 1;
+            }
+            else
+            {
+                if (isGrounded || isClimbing || r2d.velocity.magnitude < 0.01f)
+                {
+                    moveDirection = 0;
+                }
+            }
 
-        
+            if (isGrounded && !isClimbing)
+            {
+                velocity.y = 0;
+
+                if (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.W))
+                {
+                    // Charge Jump
+                    isCrouching = true;
+                    moveDirection = 0;
+                    jumpCharge += Time.deltaTime * jumpChargeRate;
+                    if (jumpCharge > jumpHeight)
+                    {
+                        jumpCharge = jumpHeight;
+                    }
+                }
+                else
+                {
+                    //Jump on Release
+                    if (jumpCharge > 0.0f)
+                    {
+                        r2d.velocity = new Vector2(r2d.velocity.x, jumpCharge);
+                        jumpCharge = 0.0f;
+                        isCrouching = false;
+                        audioSource.clip = jumpClip;
+                        audioSource.Play();
+                    }
+                }
+
+                // Change facing direction
+                if (moveDirection != 0)
+                {
+                    if (moveDirection > 0 && !facingRight)
+                    {
+                        facingRight = true;
+                        spriteRenderer.flipX = false;
+                    }
+                    if (moveDirection < 0 && facingRight)
+                    {
+                        facingRight = false;
+                        spriteRenderer.flipX = true;
+                    }
+                }
+            }
+            // Apply movement velocity
+            r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
+        }
 
         /*velocity.x = moveDirection * maxSpeed;
         velocity.y += Physics2D.gravity.y * Time.deltaTime;
@@ -132,15 +173,13 @@ public class PlayerMovement : MonoBehaviour
         animator.SetFloat("speed", Mathf.Abs(r2d.velocity.x));
         animator.SetBool("isCrouched", isCrouching);
         animator.SetBool("isGrounded", isGrounded);
-
-        // Apply movement velocity
-        r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
+        animator.SetBool("isClimbing", isClimbing);
 
         // Camera follow
-        /*        if (mainCamera)
-                {
-                    mainCamera.transform.position = new Vector3(t.position.x, cameraPos.y, cameraPos.z);
-                }*/
+        //if (mainCamera)
+        //{
+        //    mainCamera.transform.position = new Vector3(transform.position.x, transform.position.y + 5, cameraPos.z);
+        //}
     }
 
     void FixedUpdate()
@@ -160,7 +199,6 @@ public class PlayerMovement : MonoBehaviour
                 if (hit != mainCollider && !hit.CompareTag("Rope"))
                 {
                     isGrounded = true;
-                    isClimbing = false;
                     break;
                 }
             }
@@ -177,20 +215,33 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Rope") && !isGrounded)
+        if (collision.CompareTag("Rope"))
         {
             isClimbing = true;
+            transform.position = new Vector2(collision.transform.position.x, transform.position.y);
+            climbingXPos = collision.transform.position.x;
+            r2d.velocity = Vector2.zero;
         }
     }
 
-    //apply some extra velocity when leaving rope climbing
+    //private void OnCollisionEnter2D(Collision2D collision)
+    //{
+    //    if (isClimbing && !isGrounded)
+    //    {
+    //        isClimbing = false;
+    //        animator.SetBool("isClimbing", false);
+    //        r2d.velocity = Vector2.zero;
+    //    }
+    //}
+
+
+
     private void OnTriggerExit2D(Collider2D collision)
     {
-        if (collision.CompareTag("Rope") && !isGrounded)
-        {
-            r2d.AddForce(Vector2.up * ropeJump, ForceMode2D.Impulse);
+        if (collision.CompareTag("Rope"))
+        {       
             isClimbing = false;
-            isGrounded = false;
+            animator.SetBool("isClimbing", false);
         }
     }
 }

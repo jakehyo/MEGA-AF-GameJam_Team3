@@ -20,9 +20,4 @@ public class Rope : MonoBehaviour
     {
         GetComponent<CapsuleCollider2D>().enabled = true;
     }
-
-    private void Update()
-    {
-        
-    }
 }

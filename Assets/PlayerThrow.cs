@@ -11,10 +11,13 @@ public class PlayerThrow : MonoBehaviour
     private float chargeTime = 0.0f;
     [SerializeField] private GameObject projectilePrefab;
     PlayerMovement playerMoveScript;
+    AudioSource audioSource;
+    public AudioClip throwClip;
 
     private void Start()
     {
         playerMoveScript = GetComponent<PlayerMovement>();
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Update()
@@ -26,6 +29,10 @@ public class PlayerThrow : MonoBehaviour
         }
         else if (Input.GetKeyUp(KeyCode.E)) //when throw button is released, throw a projectile
         {
+            //sfx
+            audioSource.clip = throwClip;
+            audioSource.Play();
+            
             GameObject projectile = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
             //swap direction if player is not facing right
             if (playerMoveScript.facingRight)

@@ -9,7 +9,7 @@ public class Projectile : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         //if this hit something other than the player
-        if (!collision.gameObject.CompareTag("Player") && !collision.gameObject.CompareTag("Rope") && !collision.gameObject.CompareTag("PlayerProjectile"))
+        if (collision.CompareTag("Terrain"))
         {
             OnTerrainCollide();
         }

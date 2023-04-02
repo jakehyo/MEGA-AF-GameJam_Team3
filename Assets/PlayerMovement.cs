@@ -13,6 +13,8 @@ public class PlayerMovement : MonoBehaviour
     // Move player in 2D space
     public float maxSpeed = 3.4f;
     public float jumpHeight = 6.5f;
+    public float climbStrength = 10.0f;
+    public float ropeJump = 15.0f;
     public float gravityScale = 1.5f;
     float jumpCharge = 0.0f;
     public float jumpChargeRate = 2.0f;
@@ -24,6 +26,7 @@ public class PlayerMovement : MonoBehaviour
     public bool facingRight { get; private set; } = true;
     float moveDirection = 0;
     public bool isGrounded = false;
+    bool isClimbing = false;
     bool prevGrounded = false;
     public Vector2 velocity;
     Vector3 cameraPos;
@@ -65,7 +68,7 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            if (isGrounded)
+            if (isGrounded || isClimbing || r2d.velocity.magnitude < 0.01f)
             {
                 moveDirection = 0;
             }
@@ -115,6 +118,11 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
+        if (Input.GetKeyDown(KeyCode.W) && isClimbing)
+        {
+            r2d.velocity = new Vector2(r2d.velocity.x, climbStrength);
+        }
+
         
 
         /*velocity.x = moveDirection * maxSpeed;
@@ -149,9 +157,10 @@ public class PlayerMovement : MonoBehaviour
         {
             foreach (Collider2D hit in hits)
             {
-                if (hit != mainCollider)
+                if (hit != mainCollider && !hit.CompareTag("Rope"))
                 {
                     isGrounded = true;
+                    isClimbing = false;
                     break;
                 }
             }
@@ -164,5 +173,24 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Rope") && !isGrounded)
+        {
+            isClimbing = true;
+        }
+    }
+
+    //apply some extra velocity when leaving rope climbing
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Rope") && !isGrounded)
+        {
+            r2d.AddForce(Vector2.up * ropeJump, ForceMode2D.Impulse);
+            isClimbing = false;
+            isGrounded = false;
+        }
     }
 }
